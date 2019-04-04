@@ -4908,6 +4908,27 @@ mfxStatus ValidateParams(mfxVideoParam *par, mfxVppCaps *caps, VideoCORE *core, 
         }
     }
 
+    /* Check for unsupported FourCC on machines below ICL*/
+    eMFXPlatform platform = core->GetPlatformType();
+    if (platform == MFX_PLATFORM_HARDWARE)
+    {
+        eMFXHWType type = core->GetHWType();
+        if ((type < MFX_HW_ICL &&
+           (par->vpp.In.FourCC   == MFX_FOURCC_AYUV ||
+            par->vpp.Out.FourCC  == MFX_FOURCC_AYUV
+#if (MFX_VERSION >= 1027)
+         || par->vpp.In.FourCC   == MFX_FOURCC_Y210 ||
+            par->vpp.In.FourCC   == MFX_FOURCC_Y410 ||
+            par->vpp.Out.FourCC  == MFX_FOURCC_Y210 ||
+            par->vpp.Out.FourCC  == MFX_FOURCC_Y410
+#endif
+            )) ||
+            // UYVY not supported for output in all operations
+            par->vpp.Out.FourCC  == MFX_FOURCC_UYVY)
+
+            sts = GetWorstSts(sts, MFX_ERR_UNSUPPORTED);
+    }
+
 #ifdef MFX_ENABLE_MCTF
     {
         std::vector<mfxU32> pipelineList;
